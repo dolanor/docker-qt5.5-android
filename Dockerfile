@@ -6,19 +6,28 @@ ENV DEBIAN_FRONTEND=non-interactive
 
 # for some android tools
 RUN dpkg --add-architecture i386
-RUN apt-get update -y && apt-get install -y --no-install-recommends ant openjdk-7-jdk libstdc++6:i386 git vim wget p7zip
+RUN apt-get update -y && apt-get install -y --no-install-recommends ant openjdk-7-jdk libstdc++6:i386 git vim wget p7zip xvfb
 
-ENV QT_VERSION=5.5.0-2
 
+COPY installer.qs /tmp/
 # need to figure out a way to automate the installation without the graphical installer…
-RUN mkdir /tmp/qt \
-    && wget -q http://files.dev.evereska.org/qt-android.tar.gz \
-    && tar -xzf qt-android.tar.gz -C /opt/ \
-    && rm qt-android.tar.gz
+#RUN mkdir /tmp/qt \
+#    && wget -q http://files.dev.evereska.org/qt-android.tar.gz \
+#    && tar -xzf qt-android.tar.gz -C /opt/ \
+#    && rm qt-android.tar.gz
 
-#    && wget  http://download.qt.io/official_releases/qt/${QT_VERSION:0:3}/${QT_VERSION:0:5}/qt-opensource-linux-x64-android-${QT_VERSION}.run -O /tmp/qt.run \
-#   && chmod +x /tmp/qt.run && /tmp/qt.run --dump-binary-data -o /tmp/qt/data \
-#   && 7zr x /tmp/qt/data/qt.55
+ENV DISPLAY :99
+# Install Xvfb init script
+COPY xvfb_init /etc/init.d/xvfb
+RUN chmod a+x /etc/init.d/xvfb
+COPY xvfb-daemon-run /usr/bin/xvfb-daemon-run
+RUN chmod a+x /usr/bin/xvfb-daemon-run
+
+# No var expansion in RUN statement, therefore, no wget ${QT_VERSION:0:5} possible :(
+RUN /etc/init.d/xvfb start && wget -q http://download.qt.io/official_releases/qt/5.5/5.5.0/qt-opensource-linux-x64-android-5.5.0-2.run -O /tmp/qt.run && chmod +x /tmp/qt.run && /tmp/qt.run --script /tmp/installer.qs
+
+
+RUN /etc/init.d/xvfb stop
 
 ENV ANDROID_SDK_VERSION=r24.3.4
 RUN mkdir -p /opt/android \
